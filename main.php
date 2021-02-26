@@ -1,7 +1,7 @@
 <?php
 //==================================================
 //Ферма OOP [main.php]
-//Разработал Timur Moziev (code@timurrin.ru) (2021-02-26)
+//Разработал Timur Moziev (https://github.com/TimurRin, code@timurrin.ru) (2021-02-26)
 //>>>> Имплементация механизма фермы в object-oriented programming (OOP), тестовое задание для компании Oxem Studio
 //==================================================
 
