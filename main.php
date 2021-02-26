@@ -1,55 +1,67 @@
 <?php
+//==================================================
+//Ферма OOP [main.php]
+//Разработал Timur Moziev (code@timurrin.ru) (2021-02-26)
+//>>>> Имплементация механизма фермы в object-oriented programming (OOP), тестовое задание для компании Oxem Studio
+//==================================================
 
 class Barn {
-	public static $collectionsTotal = 0;
+	public static $quantity = 0; // количество хлевов для образования уникального ID
+	public $id; // регистрационный номер хлева
 
-	public static $quantity = 0;
-	public $id = "UnregisteredProperty";
+	public $livestock = array(); // indexed-массив со всеми животными хлева
+	public $livestockByType = array(); // аssociative-массив с количеством животных хлева по их типу
 
-	public $livestock = array();
-	public $livestockByType = array();
-	public $lastYield = array();
-	public $collections = 0;
+	// public $collections = 0; // хранит количество сборов продукции с этого хлева
+	public static $collectionsTotal = 0; // хранит общее количество сборов продукции со всех хлевов
 
 	public function __construct() {
+		// Несмотря на то, что ТЗ предусматривает лишь один хлев, мы всё равно делаем ему отдельный класс и присваиваем идентификатор
+		// Реализация на данный момент поддерживает несколько хлевов
 		$this->id = "barn_" . strval(self::$quantity);
 		self::$quantity += 1;
 		echo "Мы приобрели хлев и дали ему регистрационный номер " . $this->id . "\n";
 	}
 
+	// Функция собирает ресурсы с данного хлева
 	public function collectGoods() {
-		global $goods;
-		global $livestockNamesRu;
-		global $farmYield;
+		global $goods; // для красвого вывода на русском языке
+		global $livestockNamesRu; // для красвого вывода на русском языке
+		global $farmYield; // для общей статистики сбора продукции
 
 		self::$collectionsTotal += 1;
-		$this->collections += 1;
-		$this->lastYield = array();
+		// $this->collections += 1;
+
+		$currentYield = array(); // в этот массив соберём информацию о ресурсах с этого хлева для показа в конце функции
 
 		foreach ($this->livestock as $animal) {
 			$goodKey = (string) $animal->getGood();
 
+			// получаем количество продукции с каждого животного и записываем в статистику
+
 			$yield = $animal->collectGood();
-			
-			if (!isset($this->lastYield[$goodKey])) {
-				$this->lastYield[$goodKey] = 0;
+
+			if (!isset($currentYield[$goodKey])) {
+				$currentYield[$goodKey] = 0;
 			}
-			$this->lastYield[$goodKey] += $yield;
-			
+			$currentYield[$goodKey] += $yield;
+
 			if (!isset($farmYield[$goodKey])) {
 				$farmYield[$goodKey] = 0;
 			}
 			$farmYield[$goodKey] += $yield;
 		}
 
+		// отображаем статистику хлева
+
 		// echo "\nМы пошли собирать продукцию из хлева " . $this . " в " . $this->collections . "-й раз (всего " . self::$collectionsTotal . ")\n";
 		echo "\nМы пошли собирать продукцию из хлева " . $this . " (сбор №" . self::$collectionsTotal . ")";
-		echo "\nВсего животных на ферме: |";
+		echo "\nЖивотных в хлеву: |";
 		foreach ($this->livestockByType as $animalKey => $quantity) {
 			echo $livestockNamesRu[$animalKey] . " - " . $quantity . "|";
 		}
 		echo "\nСписок собранного: |";
-		foreach ($this->lastYield as $goodKey => $yield) {
+		foreach ($currentYield as $goodKey => $yield) {
 			echo $goods[$goodKey]->getNameRu() . " - " . $yield . "" . $goods[$goodKey]->getUnitRu() . "|";
 		}
 		echo "\n";
@@ -61,22 +73,26 @@ class Barn {
     }
 }
 
+// абстрактный класс для животных, на него основе создаём класс коровы и куры
 abstract class BarnAnimal {
 	public static $quantity = 0;
-	public $id = "UnregisteredProperty";
+	public $id;
 	public $barn;
 
 	public function __construct() {
+		// присваиваем идентификатор животному
 		$this->id = $this->getKey() . "_" . strval(self::$quantity);
 		self::$quantity += 1;
 		// echo "Мы приобрели животное (". $this->getNameRu() .") и дали ему регистрационный номер " . $this->id . "\n";
 	}
 
+	// функция регистрирует животное в определённом хлеве
 	public function registerAtBarn($barn) {
-		global $farmLivestock;
-		global $farmLivestockByType;
-		array_push($barn->livestock, $this);
-		array_push($farmLivestock, $this);
+		global $farmLivestock; // для общего количества животных на ферме
+		global $farmLivestockByType; // для статистики кол-ва по типу животного
+
+		array_push($barn->livestock, $this); // добавляем в массив хлева
+		array_push($farmLivestock, $this); // добавляем в массив фермы
 
 		$animalKey = $this->getKey();
 
@@ -92,7 +108,8 @@ abstract class BarnAnimal {
 		$farmLivestockByType[$animalKey] += 1;
 
 		$this->barn = $barn;
-		echo "Мы зарегистрировали животное (" . $this->getNameRu() . ", ". $this .") в хлеву " . $this->barn . "\n";
+
+		echo "Мы зарегистрировали животное (" . $this->getNameRu() . ", ". $this .") в хлев " . $this->barn . "\n";
 	}
 
 	abstract public static function getKey();
@@ -110,14 +127,13 @@ class BarnAnimalCow extends BarnAnimal {
 	public static function getKey() {
 		return "cow";
 	}
-	
+
 	public function getNameRu() {
 		return "Корова";
 	}
 
 	public function getGood() {
-		global $goods;
-		return $goods["milk"];
+		return BarnAnimalGoodMilk::getKey();
 	}
 
 	public function collectGood() {
@@ -131,12 +147,11 @@ class BarnAnimalChicken extends BarnAnimal {
 	}
 
 	public function getNameRu() {
-		return "Курица";
+		return "Кура";
 	}
 
 	public function getGood() {
-		global $goods;
-		return $goods["egg"];
+		return BarnAnimalGoodEgg::getKey();
 	}
 
 	public function collectGood() {
@@ -144,6 +159,7 @@ class BarnAnimalChicken extends BarnAnimal {
 	}
 }
 
+ // классы продукции. пока в них хранится только русская локализация
 abstract class BarnAnimalGood {
 	abstract public static function getKey();
 	abstract public function getNameRu();
@@ -159,7 +175,7 @@ class BarnAnimalGoodMilk extends BarnAnimalGood {
 	public static function getKey() {
 		return "milk";
 	}
-	
+
 	public function getNameRu() {
 		return "Молоко";
 	}
@@ -185,6 +201,8 @@ class BarnAnimalGoodEgg extends BarnAnimalGood {
 
 echo "\n\n";
 
+// массивы key-value для обращения к классам продукции и русской локализации животных
+
 $goods = array(
 	BarnAnimalGoodMilk::getKey()=>new BarnAnimalGoodMilk(),
 	BarnAnimalGoodEgg::getKey()=>new BarnAnimalGoodEgg()
@@ -197,42 +215,49 @@ $livestockNamesRu = array(
 
 $barns = array();
 
-$farmYield = array();
+$farmYield = array(); // массив, куда собирается информация об общем сборе со всех хлевов
 $farmLivestock = array();
 $farmLivestockByType = array();
+
+// в ТЗ сказано создать 1 хлев с 10 коровами и 20 курами
+// реализация даёт возможным задавать необходимое количество хлевов, коров и кур
 
 $BARNS_QUANTITY = 1;
 // $BARNS_QUANTITY = rand(1, 5); // debug
 
 for ($i = 0; $i < $BARNS_QUANTITY; $i++) {
-	$barn = new Barn();
+	$barn = new Barn(); // создаём хлев
 	array_push($barns, $barn);
-	
+
 	$cowQuantity = 10;
 	// $cowQuantity = rand(5, 15); // debug
 	$chickenQuantity = 20;
 	// $chickenQuantity = rand(15, 25); // debug
-	
+
 	for ($i2 = 0; $i2 < $cowQuantity; $i2++) {
-		$animal = new BarnAnimalCow();
+		$animal = new BarnAnimalCow(); // создаём и регистрируем корову
 		$animal->registerAtBarn($barn);
 	}
 	for ($i2 = 0; $i2 < $chickenQuantity; $i2++) {
-		$animal = new BarnAnimalChicken();
+		$animal = new BarnAnimalChicken(); // создаём и регистрируем куру
 		$animal->registerAtBarn($barn);
 	}
 }
 
 foreach ($barns as $barn) {
-	$collections = 1;
+	$barn->collectGoods(); // собираем продукцию
+	
+	// $collections = 1;
 	// $collections = rand(1, 10); // debug
-	for ($i = 0; $i < $collections; $i++) {
-		$barn->collectGoods();
-	}
+	// for ($i = 0; $i < $collections; $i++) {
+		// $barn->collectGoods();
+	// }
 }
 
-echo "\n\nИтог сбора. Кол-во хлевов: " . count($barns) . "\n";
-echo "Всего животных на ферме: |";
+// отображаем итоговую статистику по всей ферме
+
+echo "\n\nИтог сбора на ферме Дядюшки Боба. Кол-во хлевов: " . count($barns) . "\n";
+echo "Всего животных на ферме (" . count($farmLivestock) . "): |";
 foreach ($farmLivestockByType as $animalKey => $quantity) {
 	echo $livestockNamesRu[$animalKey] . " - " . $quantity . "|";
 }
