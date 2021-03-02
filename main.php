@@ -8,24 +8,13 @@
 class Barn {
 	private static $livestock = array(); // indexed-массив со всеми животными хлева
 	private static $yieldByGood = array(); // в этот массив соберём информацию о собранной продукции
-	private static $animalTypes = array(); // в этот key-value массив автоматически добавляются все производные от BarnAnimal классы (key = string classname), для валидации. значение (value = int) используется в регистрационных номерах животных
-
-	// метод регистрирует разрешённый тип животного в хлеве, увеличивает значение для рег-номера и возвращает его для формирования рег-номера
-	public static function updateAnimalTypeID($animalClass) {
-		if (!isset(self::$animalTypes[$animalClass])) {
-			self::$animalTypes[$animalClass] = 0;
-		}
-		self::$animalTypes[$animalClass]++; // регистрируем класс и обновляем значение рег-номера по типу животного
-		return self::$animalTypes[$animalClass];
-	}
 
 	// метод регистрирует животное в хлеве
 	public static function registerAnimal($animal) {
-		$animalClass = get_class($animal);
-		if (isset(self::$animalTypes[$animalClass])) {
+		if ($animal instanceof BarnAnimal) {
 			array_push(self::$livestock, $animal); // добавляем в массив хлева
 		} else {
-			echo "Класс '" . $animalClass . "' нельзя добавлять в хлев. Допускаются только производные от класса BarnAnimal\n";
+			echo "Класс '" . get_class($animal) . "' нельзя добавлять в хлев. Допускаются только производные от класса BarnAnimal\n";
 		}
 	}
 
@@ -54,13 +43,12 @@ class Barn {
 
 // абстрактный класс для животных, на него основе создаём класс коровы и куры
 abstract class BarnAnimal {
+	private static $quantity = 0; // значение для образования уникального регистрационного номера
 	private $id; // здесь хранится регистрационный номер
 
 	public function __construct() {
-		$id = Barn::updateAnimalTypeID(get_called_class());
-
-		// присваиваем регистрационный номер животному
-		$this->id = $this->getKey() . "_" . strval($id);
+		$this->id = $this->getKey() . "_" . strval(self::$quantity);
+		self::$quantity += 1;
 	}
 
 	abstract public static function getKey(); // для красивого регистрационного номера
